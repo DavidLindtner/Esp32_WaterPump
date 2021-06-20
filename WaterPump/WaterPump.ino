@@ -2,16 +2,14 @@
 #include<WiFi.h>
 #include<ESPAsyncWebServer.h>
 #include"page.h"
-
-const char *ssid = "ESP32-Access-Point";
-const char *password = "123456789";
-
-int hours = 0;
-int minutes = 0;
-int seconds = 0;
+#include"variable.h"
         
 AsyncWebServer server(80);
 
+String formatTime(void)
+{
+    return String(hours) + ":" + String(minutes) + ":" + String(seconds);
+}
 
 void setup(){
     Serial.begin(115200);
@@ -30,10 +28,10 @@ void setup(){
     
     // Route for root / web page
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-        request->send_P(200, "text/html", index_html, processor);
+        request->send_P(200, "text/html", index_html);
     });
     
-    server.on("/time", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    server.on("/setTime", HTTP_GET, [] (AsyncWebServerRequest *request) {
         if (request->hasParam("h") && request->hasParam("m") && request->hasParam("s"))
         {
             hours = request->getParam("h")->value().toInt();
@@ -48,19 +46,61 @@ void setup(){
         request->send(200, "text/plain", "OK");
     });
 
-  server.on("/update", HTTP_GET, [] (AsyncWebServerRequest *request)
-  {
-    if (request->hasParam("output") && request->hasParam("state"))
+    server.on("/currTime", HTTP_GET, [](AsyncWebServerRequest *request)
     {
-      String inputMessage1 = request->getParam("output")->value();
-      String inputMessage2 = request->getParam("state")->value();
-      Serial.println("Menime stav LED");
-      digitalWrite(inputMessage1.toInt(), inputMessage2.toInt());
-    }
-    request->send(200, "text/plain", "OK");
-  });
+        Serial.println(formatTime());
+        request->send_P(200, "text/plain", formatTime().c_str());
+    });
+
+    server.on("/toggleButtonGet", HTTP_GET, [](AsyncWebServerRequest *request)
+    {
+        String response = "";
+        if(digitalRead(RELAY_PIN))
+            response = "<a onclick=\"togglePumping()\"><button class=\"buttonRunNow\" style=\"background: red \">STOP</button></a>";
+        else
+            response = "<a onclick=\"togglePumping()\"><button class=\"buttonRunNow\" style=\"background: green \">START</button></a>";
+        request->send_P(200, "text/plain", response.c_str());
+    });
+
+    server.on("/toggleButton", HTTP_GET, [](AsyncWebServerRequest *request)
+    {
+        String response = "";
+        if(digitalRead(RELAY_PIN))
+            startPumping = false;
+        else
+            startPumping = true;
+        request->send(200, "text/plain", "OK");
+    });
+  
+    server.on("/runPumpInterval", HTTP_GET, [](AsyncWebServerRequest *request)
+    {
+        Serial.println("sme tu");
+        if (request->hasParam("t"))
+        {
+            runPumpTime = request->getParam("t")->value().toInt();
+            Serial.println(runPumpTime);
+        }
+        request->send(200, "text/plain", "OK");
+    });
+
+    server.on("/runPumpIntervalGet", HTTP_GET, [](AsyncWebServerRequest *request)
+    {
+        if (request->hasParam("t"))
+            runPumpTime = request->getParam("t")->value().toInt();
+        request->send_P(200, "text/plain", String(runPumpTime).c_str());
+    });
     
     server.begin();
 }
 
-void loop(){}
+void loop()
+{
+    delay(1000);
+    seconds++;
+    
+    if(startPumping)
+        digitalWrite(RELAY_PIN, HIGH);
+    else
+        digitalWrite(RELAY_PIN, LOW);
+
+}
