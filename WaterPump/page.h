@@ -1,8 +1,6 @@
 #ifndef __PAGE_H__
 #define __PAGE_H__
 
-#include"variable.h"
-
 const char index_html[] PROGMEM = R"rawliteral(
     <!DOCTYPE HTML><html>
     <head>
@@ -113,13 +111,89 @@ const char index_html[] PROGMEM = R"rawliteral(
 
         </style>
             <script>
-                setInterval(getPumpInterval, 1000);
-                setInterval(getButtonColor, 1000);
-                setInterval(getCurrTime, 1000);
-                setInterval(getRegularPumping, 1000);
-                setInterval(getPeriod, 1000);
+                setInterval(getData, 1000);
+                setInterval(connection, 2000);
+
+                var counter = 0;
+                var counterOld = 0;
+
+                function connection()
+                {
+                    if(counter == counterOld)
+                    {
+                        document.getElementById("connection").innerHTML = "Pripojenie: NEAKTIVNE";
+                        document.getElementById("connection").style.color = "red";
+                    }
+                    else
+                    {
+                        document.getElementById("connection").innerHTML = "Pripojenie: AKTIVNE";
+                        document.getElementById("connection").style.color = "green";
+                        counterOld = counter;
+                    }
+                }
+                
+                function getData()
+                {
+                    var xhr = new XMLHttpRequest();
+                    xhr.onreadystatechange = function()
+                    {
+                        if (this.readyState == 4 && this.status == 200)
+                        {
+                            var message = this.responseText.split("/");
+                            
+                            //  perioda polievania
+                            document.getElementById("period").value = message[0];
+                            
+                            //  aktualny cas
+                            document.getElementById("currTime").innerHTML = message[1];
+                            
+                            //  tlacitko jednorazoveho spustania polievania
+                            if(message[2] === '1')
+                                document.getElementById("toggleButton").innerHTML = "<a onclick=\"togglePumping()\"><button class=\"buttonRunNow\" style=\"background: red \">STOP</button></a>";
+                            else
+                                document.getElementById("toggleButton").innerHTML = "<a onclick=\"togglePumping()\"><button class=\"buttonRunNow\" style=\"background: green \">START</button></a>";
+
+                            //  toggle pravidelne polievanie
+                            var isTrueSet = (message[3] === '1');
+                            document.getElementById("regularPump").checked = isTrueSet;
+                            document.getElementById("period").disabled = !isTrueSet;
+                            document.getElementById("pumpHour").disabled = !isTrueSet;
+                            document.getElementById("pumpMinute").disabled = !isTrueSet;
+                            document.getElementById("pumpIntervalReg").disabled = !isTrueSet;
+                            if(isTrueSet)
+                            {
+                                document.getElementById("periodLabel").style.color = "black";
+                                document.getElementById("periodLabelReg").style.color = "black";
+                                document.getElementById("beginLabel").style.color = "black";
+                            }
+                            else
+                            {
+                                document.getElementById("periodLabel").style.color = "lightgrey";
+                                document.getElementById("periodLabelReg").style.color = "lightgrey";
+                                document.getElementById("beginLabel").style.color = "lightgrey";
+                            }
+
+                            //  interval jednorazoveho pumpovania
+                            document.getElementById("pumpInterval").value = message[4];
+
+                            //  interval pravidelneho pumpovania
+                            document.getElementById("pumpIntervalReg").value = message[5];
 
 
+                            //  pociatocny cas polievania hodina
+                            document.getElementById("pumpHour").value = message[6];
+
+                            //  pociatocny cas polievania minuta
+                            document.getElementById("pumpMinute").value = message[7];
+
+                            //  pripojenie na ESP
+                            counter = message[8];
+                        }
+                    };
+                    xhr.open("GET", "/data", true);
+                    xhr.send();
+                }
+                
                 function sendTime(form)
                 {
                     var dt = new Date();
@@ -128,38 +202,11 @@ const char index_html[] PROGMEM = R"rawliteral(
                     xhr.send();
                 }
                
-                function getCurrTime()
-                {
-                    var xhr = new XMLHttpRequest();
-                    xhr.onreadystatechange = function()
-                    {
-                        if (this.readyState == 4 && this.status == 200)
-                        {
-                            document.getElementById("currTime").innerHTML = this.responseText;
-                        }
-                    };
-                    xhr.open("GET", "/currTime", true);
-                    xhr.send();
-                }
-                
+               
                 function togglePumping()
                 {
                     var xhr = new XMLHttpRequest();
                     xhr.open("GET", "/toggleButton", true);
-                    xhr.send();
-                }
-
-                function getButtonColor()
-                {
-                    var xhr = new XMLHttpRequest();
-                    xhr.onreadystatechange = function()
-                    {
-                        if (this.readyState == 4 && this.status == 200)
-                        {
-                            document.getElementById("toggleButton").innerHTML = this.responseText;
-                        }
-                    };
-                    xhr.open("GET", "/toggleButtonGet", true);
                     xhr.send();
                 }
 
@@ -171,20 +218,14 @@ const char index_html[] PROGMEM = R"rawliteral(
                     xhr.send();
                 }
 
-                function getPumpInterval()
+                function runPumpIntervalRegular()
                 {
                     var xhr = new XMLHttpRequest();
-                    xhr.onreadystatechange = function()
-                    {
-                        if (this.readyState == 4 && this.status == 200)
-                        {
-                            document.getElementById("pumpInterval").value = this.responseText;
-                        }
-                    };
-                    xhr.open("GET", "/runPumpIntervalGet", true);
+                    var timeVal = document.getElementById("pumpIntervalReg").value;
+                    xhr.open("GET", "/runPumpIntervalReg?t=" + timeVal.toString(), true);
                     xhr.send();
                 }
-                
+               
                 function regularPumping(element)
                 {
                     var xhr = new XMLHttpRequest();
@@ -199,30 +240,6 @@ const char index_html[] PROGMEM = R"rawliteral(
                     xhr.send();
                 }
                 
-                function getRegularPumping()
-                {
-                    var xhr = new XMLHttpRequest();
-                    xhr.onreadystatechange = function()
-                    {
-                        if (this.readyState == 4 && this.status == 200)
-                        {
-                            var isTrueSet = (this.responseText === 'true');
-                            document.getElementById("regularPump").checked = isTrueSet;
-                            document.getElementById("period").disabled = !isTrueSet;
-                            if(isTrueSet)
-                            {
-                                document.getElementById("periodLabel").style.color = "black"
-                            }
-                            else
-                            {
-                                document.getElementById("periodLabel").style.color = "lightgrey"
-                            }
-                        }
-                    };
-                    xhr.open("GET", "/regularPumpingGet", true);
-                    xhr.send();
-                }
-
                 function runPumpPeriod()
                 {
                     var xhr = new XMLHttpRequest();
@@ -230,24 +247,31 @@ const char index_html[] PROGMEM = R"rawliteral(
                     xhr.open("GET", "/runPumpPeriod?p=" + timeVal.toString(), true);
                     xhr.send();
                 }
-                
-                function getPeriod()
+
+                function pumpHour()
                 {
                     var xhr = new XMLHttpRequest();
-                    xhr.onreadystatechange = function()
-                    {
-                        if (this.readyState == 4 && this.status == 200)
-                        {
-                            document.getElementById("period").value = this.responseText;
-                        }
-                    };
-                    xhr.open("GET", "/periodGet", true);
+                    var hour = document.getElementById("pumpHour").value;
+                    xhr.open("GET", "/pumpHour?h=" + hour.toString(), true);
                     xhr.send();
                 }
+                
+                function pumpMinute()
+                {
+                    var xhr = new XMLHttpRequest();
+                    var minute = document.getElementById("pumpMinute").value;
+                    xhr.open("GET", "/pumpMinute?m=" + minute.toString(), true);
+                    xhr.send();
+                }
+                
             </script>
     </head>
     
     <body>
+        <div>
+            <h3 id="connection">Pripojenie</h3>
+        </div>
+
         <div>
             <h3>Aktualny cas v riadiacej jednotke<h3>
             <h3 id="currTime">0:0:0</h3>
@@ -258,6 +282,12 @@ const char index_html[] PROGMEM = R"rawliteral(
         </div>
         
         <p></p>
+        <hr>
+        <p></p>
+        
+        <div>
+            <h3>Jednorazove polievanie<h3>
+        </div>
         
         <div class="container-grid">
             <div class="col col-1">
@@ -275,12 +305,12 @@ const char index_html[] PROGMEM = R"rawliteral(
                      <option value="8">8 min</option>
                      <option value="9">9 min</option>
                      <option value="10">10 min</option>
-                     <option value="15">15 min</option>
-                     <option value="20">20 min</option>
                 </select>
             </div>
         </div>
 
+        <p></p>
+        <hr>
         <p></p>
 
         <div class="container-grid2">
@@ -314,6 +344,70 @@ const char index_html[] PROGMEM = R"rawliteral(
             </div>
         </div>
 
+        <div class="container-grid2">
+            <div class="col col-1">
+                <h3 id="periodLabelReg">Dlzka polievania:<h3>
+            </div>
+            <div class="col col-2">
+                <select id="pumpIntervalReg" onchange="runPumpIntervalRegular()" class="dropdownSelector">
+                     <option value="1">1 min</option>
+                     <option value="2">2 min</option>
+                     <option value="3">3 min</option>
+                     <option value="4">4 min</option>
+                     <option value="5">5 min</option>
+                     <option value="6">6 min</option>
+                     <option value="7">7 min</option>
+                     <option value="8">8 min</option>
+                     <option value="9">9 min</option>
+                     <option value="10">10 min</option>
+                </select>
+            </div>
+        </div>
+        
+        <div>
+            <h3 id="beginLabel">Zaciatok polievania:<h3>
+        </div>
+        <div class="container-grid2">
+            <div class="col col-1">
+                <select id="pumpHour" onchange="pumpHour()" class="dropdownSelector">
+                     <option value="0">0 hod</option>
+                     <option value="1">1 hod</option>
+                     <option value="2">2 hod</option>
+                     <option value="3">3 hod</option>
+                     <option value="4">4 hod</option>
+                     <option value="5">5 hod</option>
+                     <option value="6">6 hod</option>
+                     <option value="7">7 hod</option>
+                     <option value="8">8 hod</option>
+                     <option value="9">9 hod</option>
+                     <option value="10">10 hod</option>
+                     <option value="11">11 hod</option>
+                     <option value="12">12 hod</option>
+                     <option value="13">13 hod</option>
+                     <option value="14">14 hod</option>
+                     <option value="15">15 hod</option>
+                     <option value="16">16 hod</option>
+                     <option value="17">17 hod</option>
+                     <option value="18">18 hod</option>
+                     <option value="19">19 hod</option>
+                     <option value="20">20 hod</option>
+                     <option value="21">21 hod</option>
+                     <option value="22">22 hod</option>
+                     <option value="23">23 hod</option>
+
+                </select>
+            </div>
+            <div class="col col-2">
+                <select id="pumpMinute" onchange="pumpMinute()" class="dropdownSelector">
+                     <option value="0">00 min</option>
+                     <option value="10">10 min</option>
+                     <option value="20">20 min</option>
+                     <option value="30">30 min</option>
+                     <option value="40">40 min</option>
+                     <option value="50">50 min</option>
+                </select>
+            </div>
+        </div>
     </body>
 </html>
 )rawliteral";
