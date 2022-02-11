@@ -22,18 +22,10 @@ long milliSecPumpStart_AUTO = 0;
 long milliSecCounterAct = 0;
 long milliSecCountActStart = 0;
 
-long milliSecCounterMin = 0;
-long milliSecCountMinStart = 0;
+long secondsCounter = 0;
 
 int counterAct = 0;
 int counterMin = 0;
-
-//------------------------------------------------------------------------------------------------------------------------
-//  Time variables
-//------------------------------------------------------------------------------------------------------------------------
-int hours = 0;
-int minutes = 0;
-int seconds = 0;
 
 //------------------------------------------------------------------------------------------------------------------------
 //  Manual pumping variables
@@ -45,10 +37,11 @@ int pumpTime = 3;
 //  Automatic pumping variables
 //------------------------------------------------------------------------------------------------------------------------
 bool regularPumping = true;
+bool pumpRUN_AUTO = false;
 
 int pumpTime_AUTO = 3;
 int period_INT = 2;
-int periodMinute = 0;
+long periodSeconds = 0;
 
 int pumpHour = 18;
 int pumpMinute = 0;
@@ -59,10 +52,17 @@ int period_INT_OLD = 2;
 int pumpHour_OLD = 0;
 int pumpMinute_OLD = 0;
 
+//------------------------------------------------------------------------------------------------------------------------
+//  Time variables
+//------------------------------------------------------------------------------------------------------------------------
+int hours = 0;
+int minutes = 0;
+int seconds = 0;
+int secondsOld = 0;
+
 bool valueChange = true;
 
-bool pumpRUN_AUTO = false;
-
+char bufTime[8];
 
 void storeData(void)
 {

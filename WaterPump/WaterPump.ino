@@ -44,16 +44,18 @@ void setup()
             hours = request->getParam("h")->value().toInt();
             minutes = request->getParam("m")->value().toInt();
             seconds = request->getParam("s")->value().toInt();
-            rtc.setTime(seconds, minutes, hours, 1, 1, 2021);
+            rtc.setTime(seconds, minutes, hours, 1, 1, 2022);
         }
         request->send(200, "text/plain", "OK");
     });
 
     server.on("/data", HTTP_GET, [](AsyncWebServerRequest *request)
     {
+        sprintf(bufTime, "%02d:%02d:%02d", hours, minutes, seconds);
+
         String response = "";
         response += String(period_INT) + "/";
-        response += String(hours) + ":" + String(minutes) + ":" + String(seconds) + "/";
+        response += String(bufTime) + "/";
         if(pumpRUN)
             response += "1/";
         else
@@ -67,6 +69,11 @@ void setup()
         response += String(pumpHour) + "/";
         response += String(pumpMinute) + "/";
         response += String(counterAct) + "/";
+        if(pumpRUN || (regularPumping && pumpRUN_AUTO))
+            response += "1/";
+        else
+            response += "0/";
+
         request->send_P(200, "text/plain", response.c_str());
     });
     
@@ -126,7 +133,6 @@ void setup()
 
 void loop()
 {
- 
     //------------------------------------------------------------------------------------------------------------------------
     //  Get time
     //------------------------------------------------------------------------------------------------------------------------
@@ -160,36 +166,36 @@ void loop()
     switch(period_INT)
     {
       case 1:
-          periodMinute = 720;
+          periodSeconds = 43200;
           break;
       case 2:
-          periodMinute = 1440;
+          periodSeconds = 86400;
           break;
       case 3:
-          periodMinute = 2880;
+          periodSeconds = 172800;
           break;
       case 4:
-          periodMinute = 4320;
+          periodSeconds = 259200;
           break;
       case 5:
-          periodMinute = 5760;
+          periodSeconds = 345600;
           break;
       case 6:
-          periodMinute = 7200;
+          periodSeconds = 432000;
           break;
       case 7:
-          periodMinute = 8640;
+          periodSeconds = 518400;
           break;
       case 8:
-          periodMinute = 10080;
+          periodSeconds = 604800;
           break;
     }
 
-    if((hours == pumpHour && minutes == pumpMinute && valueChange == true) || (counterMin == periodMinute && valueChange == false))
+    if((hours == pumpHour && minutes == pumpMinute && valueChange == true) || (secondsCounter == periodSeconds && valueChange == false))
     {
         pumpRUN_AUTO = true;
         valueChange = false;
-        counterMin = 0;
+        secondsCounter = 0;
     }
 
     //------------------------------------------------------------------------------------------------------------------------
@@ -197,7 +203,7 @@ void loop()
     //------------------------------------------------------------------------------------------------------------------------
 
     //__________________________________________
-    //  Turn off one time pumping 
+    //  Turn off one time watering 
     //__________________________________________
     if(pumpRUN && milliSecPump < pumpTime*60000)
         milliSecPump = milliSec - milliSecPumpStart;
@@ -209,10 +215,13 @@ void loop()
     }
     
     //__________________________________________
-    //  Turn off regullar pumping 
+    //  Turn off regullar watering 
     //__________________________________________
+    
     if(pumpRUN_AUTO && milliSecPump_AUTO < pumpTime_AUTO*60000)
+    {
         milliSecPump_AUTO = milliSec - milliSecPumpStart_AUTO;
+    }
     else
     {
         pumpRUN_AUTO = false;
@@ -237,23 +246,15 @@ void loop()
         milliSecCounterAct = 0;
         milliSecCountActStart = milliSec;
     }
-    
-    //__________________________________________
-    //  Minute counter
-    //__________________________________________
-    if(milliSecCounterMin < 60000)
-    {
-        milliSecCounterMin = milliSec - milliSecCountMinStart;
-    }
-    else
-    {
-        counterMin++;
-        //storeData();
-        milliSecCounterMin = 0;
-        milliSecCountMinStart = milliSec;
-    }
 
-   
+    //__________________________________________
+    //  Seconds counter for cyclic watering
+    //__________________________________________
+    if(seconds != secondsOld)
+        secondsCounter++;
+        
+    secondsOld = seconds;
+    
     //------------------------------------------------------------------------------------------------------------------------
     //  Writing to outputs
     //------------------------------------------------------------------------------------------------------------------------
@@ -261,7 +262,6 @@ void loop()
         digitalWrite(RELAY_PIN, HIGH);
     else
         digitalWrite(RELAY_PIN, LOW);
-
+   
     delay(100);
-    
 }

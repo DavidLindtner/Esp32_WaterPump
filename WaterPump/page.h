@@ -31,7 +31,7 @@ const char index_html[] PROGMEM = R"rawliteral(
                 right: 0;
                 bottom: 0;
                 background-color: grey;
-                border-radius: 6px
+                border-radius: 40px
             }
             .slider:before
             {
@@ -44,11 +44,11 @@ const char index_html[] PROGMEM = R"rawliteral(
                 background-color: white;
                 -webkit-transition: .4s;
                 transition: .4s;
-                border-radius: 3px
+                border-radius: 30px
             }
             input:checked+.slider
             {
-                background-color: #2196F3
+                background-color: green
             }
             input:checked+.slider:before
             {
@@ -66,7 +66,7 @@ const char index_html[] PROGMEM = R"rawliteral(
                 font-size: 30px;
                 margin: 2px;
                 cursor: pointer;
-                border-radius: 10px;
+                border-radius: 30px;
             }
             .buttonRunNow
             {
@@ -77,15 +77,16 @@ const char index_html[] PROGMEM = R"rawliteral(
                 font-size: 30px;
                 margin: 2px;
                 cursor: pointer;
-                border-radius: 10px;
+                border-radius: 30px;
             }
             .dropdownSelector
             {
-                border-radius: 10px;
+                border-radius: 30px;
                 height: 70px;
                 font-size: 30px;
                 border-width: 5px;
                 border-color: black;
+                background: white;
             }
             .container-grid
             {
@@ -188,6 +189,18 @@ const char index_html[] PROGMEM = R"rawliteral(
 
                             //  pripojenie na ESP
                             counter = message[8];
+
+                            //  stav cerpadla
+                            if(message[9] === '1')
+                            {
+                                document.getElementById("statusInfo").style.color = "red";
+                                document.getElementById("statusInfo").innerHTML = "Cerpadlo teraz CERPA vodu";
+                            }
+                            else
+                            {
+                                document.getElementById("statusInfo").style.color = "black";
+                                document.getElementById("statusInfo").innerHTML = "Cerpadlo teraz NECERPA vodu";
+                            }
                         }
                     };
                     xhr.open("GET", "/data", true);
@@ -282,6 +295,12 @@ const char index_html[] PROGMEM = R"rawliteral(
         </div>
         
         <p></p>
+        <hr>
+
+        <div>
+            <h3 id="statusInfo"> </h3>
+        </div>
+
         <hr>
         <p></p>
         
